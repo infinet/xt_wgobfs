@@ -18,3 +18,9 @@ all:
 	make -C $(KERNEL_DIR) M=$(PWD) modules
 clean:
 	make -C ${KERNEL_DIR} M=$$PWD $@;
+install:
+	cp xt_WGOBFS.ko $(MODULES_DIR)/kernel/net/netfilter/
+	depmod -a
+	modprobe xt_WGOBFS
+	echo "xt_WGOBFS" > /etc/modules-load.d/wgobfs.conf
+

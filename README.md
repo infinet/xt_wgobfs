@@ -24,8 +24,10 @@ Tested working on Alpine linux kernel 5.15 and CentOS 7 kernel 3.10.
 
 ### Build and install
 
-Run `make` in kernel/ to build kernel module. Copy `xt_WGOBFS.ko` to
-/lib/modules/yourkernelversion/kernel/net/netfilter/, then run `depmod -a`.
+Run `make` in kernel/ to build kernel module. `sudo make install` will install
+the kernel module; or, copy `xt_WGOBFS.ko` to
+/lib/modules/yourkernelversion/kernel/net/netfilter/ manually, followed by
+`depmod -a && modprobe xt_WGOBFS`.
 
 Run `make` in xtables/ to build iptables extension. Copy `libxt_WGOBFS.so` to
 xtables directory.
@@ -44,16 +46,16 @@ And `--obfs` or `--unobfs` to indicate the operation mode.
 **Before** bring up wg, on client, insert two iptables rules:
 
 ```shell
-iptables -t mangle -I INPUT -p udp -m udp --sport 6789 -J WGOBFS --key mysecretkey --unobfs
-iptables -t mangle -I OUTPUT -p udp -m udp --dport 6789 -J WGOBFS --key mysecretkey --obfs
+iptables -t mangle -I INPUT -p udp -m udp --sport 6789 -j WGOBFS --key mysecretkey --unobfs
+iptables -t mangle -I OUTPUT -p udp -m udp --dport 6789 -j WGOBFS --key mysecretkey --obfs
 ```
 
 The above rules assuming remote server is listening on port 6789. On server, do
 the opposite:
 
 ```shell
-iptables -t mangle -I INPUT -p udp -m udp --dport 6789 -J WGOBFS --key mysecretkey --unobfs
-iptables -t mangle -I OUTPUT -p udp -m udp --sport 6789 -J WGOBFS --key mysecretkey --obfs
+iptables -t mangle -I INPUT -p udp -m udp --dport 6789 -j WGOBFS --key mysecretkey --unobfs
+iptables -t mangle -I OUTPUT -p udp -m udp --sport 6789 -j WGOBFS --key mysecretkey --obfs
 ```
 
 Mangle FORWARD chain shall also work.
