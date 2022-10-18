@@ -26,12 +26,14 @@ struct obfs_buf {
         u8 rnd_len;
 };
 
-/* get a pseudo-random string by hashing skbuff timestamp */
-static u8 get_prn_insert(ktime_t t, struct obfs_buf *ob, const u8 *k,
+/* get a pseudo-random string by hashing skbuff timestamp and 8-16 bytes of WG
+ * message
+ */
+static u8 get_prn_insert(u8 *buf, ktime_t t, struct obfs_buf *ob, const u8 *k,
                          const u8 min_len, const u8 max_len)
 {
         u8 r, i;
-        u64 chacha_input = (u64) t;
+        u64 chacha_input = (u64)t + (u64)(buf + 8);
 
         r = 0;
         while (1) {
@@ -199,7 +201,7 @@ static unsigned int xt_obfs(struct sk_buff *skb,
          * short string if WG packet is big.
          */
         max_rnd_len = (wg_data_len > 200) ? 8 : MAX_RND_LEN;
-        rnd_len = get_prn_insert(skb->tstamp, &ob, info->chacha_key,
+        rnd_len = get_prn_insert(buf_udp, skb->tstamp, &ob, info->chacha_key,
                                  MIN_RND_LEN, max_rnd_len);
         if (prepare_skb_for_insert(skb, rnd_len))
                 return NF_DROP;
