@@ -21,26 +21,27 @@
 #define MIN_RND_LEN           4
 
 struct obfs_buf {
-        u8 chacha_out[CHACHA20_BLOCK_SIZE];
-        u8 rnd[CHACHA20_BLOCK_SIZE];
+        u8 rnd[MAX_RND_LEN];
+        u8 chacha_out[CHACHA8_OUTPUT_SIZE];
         u8 rnd_len;
 };
 
-/* get a pseudo-random string by hashing skbuff timestamp and 8-16 bytes of WG
- * message
+/* 1) Fill the allocated @buf with random bytes.
+ * 2) Return a number in [min_len, max_len] at random.
+ *
+ * get random from kernel is slightly faster than run chacha8 on seeds such as
+ * timestamp or WG counter
  */
-static u8 get_prn_insert(u8 *buf, ktime_t t, struct obfs_buf *ob, const u8 *k,
-                         const u8 min_len, const u8 max_len)
+static u8 get_random_insert(u8 *buf, u8 min_len, u8 max_len)
 {
         u8 r, i;
-        u64 chacha_input = (u64)t + (u64)(buf + 8);
 
         r = 0;
         while (1) {
-                chacha8_hash(chacha_input++, k, ob->rnd);
-                for (i = 0; i < CHACHA20_BLOCK_SIZE; i++) {
-                        if (ob->rnd[i] >= min_len && ob->rnd[i] <= max_len) {
-                                r = ob->rnd[i];
+                get_random_bytes_wait(buf, MAX_RND_LEN);
+                for (i = 0; i < MAX_RND_LEN; i++) {
+                        if (buf[i] >= min_len && buf[i] <= max_len) {
+                                r = buf[i];
                                 break;
                         }
                 }
@@ -49,20 +50,19 @@ static u8 get_prn_insert(u8 *buf, ktime_t t, struct obfs_buf *ob, const u8 *k,
                         break;
         }
 
-        ob->rnd_len = r;
         return r;
 }
 
 /* Replace the all zeros mac2 with random bytes, then change the type field to
  * 0x11 or 0x12
  */
-static void obfs_mac2(u8 *buf, const int data_len, const u8 *k)
+static void obfs_mac2(u8 *buf, const int data_len, struct obfs_buf *ob,
+                      const u8 *k)
 {
         u8 type;
         struct wg_message_handshake_initiation *hsi;
         struct wg_message_handshake_response *hsr;
         u32 *np;
-        u8 chacha_out[CHACHA20_BLOCK_SIZE];
 
         type = buf[0];
         if (type == WG_HANDSHAKE_INIT && data_len == 148) {
@@ -76,8 +76,8 @@ static void obfs_mac2(u8 *buf, const int data_len, const u8 *k)
                  * - Use 8th - 16th byte of WG packet as input of chacha8
                  * - Write 128bits output to mac2
                  */
-                chacha8_hash((const u64)(buf + 8), k, chacha_out);
-                memcpy(hsi->macs.mac2, chacha_out, WG_COOKIE_LEN);
+                chacha8_hash((const u64)(buf + 8), k, ob->chacha_out);
+                memcpy(hsi->macs.mac2, ob->chacha_out, WG_COOKIE_LEN);
 
                 /* mark the packet as need restore mac2 upon receiving */
                 buf[0] |= 0x10;
@@ -88,8 +88,8 @@ static void obfs_mac2(u8 *buf, const int data_len, const u8 *k)
                 if (*np)
                         return;
 
-                chacha8_hash((const u64)(buf + 8), k, chacha_out);
-                memcpy(hsr->macs.mac2, chacha_out, WG_COOKIE_LEN);
+                chacha8_hash((const u64)(buf + 8), k, ob->chacha_out);
+                memcpy(hsr->macs.mac2, ob->chacha_out, WG_COOKIE_LEN);
                 buf[0] |= 0x10;
         }
 }
@@ -97,7 +97,7 @@ static void obfs_mac2(u8 *buf, const int data_len, const u8 *k)
 static int random_drop_wg_keepalive(u8 *buf, const int len, const u8 *key)
 {
         u8 type;
-        u8 buf_prn[CHACHA20_BLOCK_SIZE];
+        u8 buf_prn[CHACHA8_OUTPUT_SIZE];
 
         type = *buf;
         if (type != WG_DATA || len != 32)
@@ -128,22 +128,20 @@ static int random_drop_wg_keepalive(u8 *buf, const int len, const u8 *key)
  */
 static void obfs_wg(u8 *buf, const int len, struct obfs_buf *ob, const u8 *key)
 {
-        u8 *b, *tail, *rnd;
+        u8 *b, *tail;
         u8 rnd_len;
         int i;
 
-        rnd = ob->rnd;
-        rnd_len = ob->rnd_len;
-        obfs_mac2(buf, len, key);
+        obfs_mac2(buf, len, ob, key);
         /* Generate pseudo-random string from last 8 bytes of WG packet. Use it
          * to XOR with the first 16 bytes of WG message. It has message type,
          * reserved field and counter. They look distinct.
          */
         chacha8_hash((const u64)(buf + len - CHACHA8_INPUT_SIZE), key,
                      ob->chacha_out);
-
+        rnd_len = ob->rnd_len;
         /* set the first byte of random as its length */
-        rnd[0] = rnd_len ^ ob->chacha_out[16];
+        ob->rnd[0] = rnd_len ^ ob->chacha_out[16];
         b = buf;
         for (i = 0; i < 16; i++, b++)
                 *b ^= ob->chacha_out[i];
@@ -154,7 +152,7 @@ static void obfs_wg(u8 *buf, const int len, struct obfs_buf *ob, const u8 *key)
         for (i = 0; i < len; i++, tail--, b--)
                 *b = *tail;
 
-        memcpy(buf, rnd, rnd_len);
+        memcpy(buf, ob->rnd, rnd_len);
 }
 
 /* make a skb writable, and if necessary, expand it */
@@ -201,8 +199,7 @@ static unsigned int xt_obfs(struct sk_buff *skb,
          * short string if WG packet is big.
          */
         max_rnd_len = (wg_data_len > 200) ? 8 : MAX_RND_LEN;
-        rnd_len = get_prn_insert(buf_udp, skb->tstamp, &ob, info->chacha_key,
-                                 MIN_RND_LEN, max_rnd_len);
+        rnd_len = get_random_insert(&(ob.rnd[0]), MIN_RND_LEN, max_rnd_len);
         if (prepare_skb_for_insert(skb, rnd_len))
                 return NF_DROP;
 
@@ -260,7 +257,7 @@ static void restore_mac2(u8 *buf)
 
 static int restore_wg(u8 *buf, int len, const u8 *key)
 {
-        u8 buf_prn[CHACHA20_BLOCK_SIZE];
+        u8 buf_prn[CHACHA8_OUTPUT_SIZE];
         u8 *b, *head;
         int i, wg_data_len, rnd_len;
 

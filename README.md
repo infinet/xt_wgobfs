@@ -1,8 +1,8 @@
 # Iptables WireGuard obfuscation extension
 
-The sender and receiver share a secret key, which is used by SipHash to create
-identical pseudo-random numbers with same input. These pseudo-random numbers
-are used in obfuscation.
+The sender and receiver share a secret key, which is used by chacha8 to hash
+the same input into identical pseudo-random numbers. These pseudo-random
+numbers are used in obfuscation.
 
 - The first 16 bytes of WG message is obfuscated.
 - The mac2 field is also obfuscated, if it is all zeros.
@@ -10,7 +10,7 @@ are used in obfuscation.
 - Drop keepalive message with 80% probability.
 - Change the Diffserv field to zero.
 
-SipHash 1-2 is used here since the goal is not encryption.
+Chacha8 is used here since the goal is not encryption.
 
 Tested working on Alpine linux kernel 5.15 and CentOS 7 kernel 3.10.
 
@@ -39,9 +39,14 @@ xtables directory.
 
 ### Usage
 
-This extension takes two parameters. `--key` for a shared secret between client
-and server. It is for generating a 128 bits shared secret key used by SipHash.
-And `--obfs` or `--unobfs` to indicate the operation mode.
+This extension takes two parameters.
+
+`--key` for a shared secret between client and server. If a key is a long
+string, it will be cut at 64 characters; if a key is short, then it will be
+repeated until reaches 64 characters. This 64 characters long string is the key
+used by chacha8 hash.
+
+`--obfs` or `--unobfs` to indicate the operation mode.
 
 **Before** bring up wg, on client, insert two iptables rules:
 

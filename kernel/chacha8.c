@@ -93,6 +93,6 @@ void chacha8_hash(const u64 nonce, const u8 key[CHACHA20_KEY_SIZE], u8 *out)
 
 	EIGHT_ROUNDS(x);
 
-	for (i = 0; i < ARRAY_SIZE(x); ++i)
+	for (i = 0; i < CHACHA8_OUTPUT_WORDS; ++i)
 		stream[i] = cpu_to_le32(x[i] + ctx.state[i]);
 }
