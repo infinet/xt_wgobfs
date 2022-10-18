@@ -12,7 +12,7 @@ endif
 
 
 obj-m += xt_WGOBFS.o
-xt_WGOBFS-objs += xt_WGOBFS_main.o siphash.o
+xt_WGOBFS-objs += xt_WGOBFS_main.o chacha8.o
 
 all:
 	make -C $(KERNEL_DIR) M=$(PWD) modules
