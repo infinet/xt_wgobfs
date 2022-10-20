@@ -73,7 +73,7 @@ static int wg_obfs_parse(int c, char **argv, int z1, unsigned int *flags,
 
                 strncpy(info->key, s, XT_WGOBFS_MAX_KEY_SIZE);
                 *flags |= FLAGS_KEY;
-                expand_string(s, len, chacha_key, 32);
+                expand_string(s, len, chacha_key, XT_CHACHA_KEY_SIZE);
                 memcpy(info->chacha_key, chacha_key, XT_CHACHA_KEY_SIZE);
                 return true;
         case OPT_OBFS:

@@ -42,8 +42,8 @@ xtables directory.
 This extension takes two parameters.
 
 `--key` for a shared secret between client and server. If a key is a long
-string, it will be cut at 64 characters; if a key is short, then it will be
-repeated until reaches 64 characters. This 64 characters long string is the key
+string, it will be cut at 32 characters; if a key is short, then it will be
+repeated until reaches 32 characters. This 32 characters long string is the key
 used by chacha8 hash.
 
 `--obfs` or `--unobfs` to indicate the operation mode.
@@ -69,7 +69,7 @@ Mangle FORWARD chain shall also work.
 ### Performance
 
 Test in two Alpine linux VMs on same host. Each VM has 1 CPU and 256M RAM.
-Iperf3 over wg reports 1.1Gbits/sec without obfuscation, 860Mbits/sec with
+Iperf3 over wg reports 1.1Gbits/sec without obfuscation, 950Mbits/sec with
 obfuscation.
 
 
