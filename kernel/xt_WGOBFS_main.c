@@ -26,14 +26,26 @@ struct obfs_buf {
         u8 rnd_len;
 };
 
-/* get a pseudo-random string by hashing skbuff timestamp and pointer value of
- * wg buffer */
-static u8 get_prn_insert(u8 *buf, ktime_t t, struct obfs_buf *ob, const u8 *k,
+/* get a pseudo-random string by hashing part of wg message */
+static u8 get_prn_insert(u8 *buf, struct obfs_buf *ob, const u8 *k,
                          const u8 min_len, const u8 max_len)
 {
         u8 r, i;
-        //u64 chacha_input = (u64)t + (u64)*(u64 *)(buf + 8);
-        u64 chacha_input = (u64)t + (u64)buf;
+        u64 chacha_input, *p64;
+
+        /* The 16th to 23rd bytes is:
+         *  - handshake initiation unencrypted_ephemeral (32 bytes starts at 8)
+         *  - handshake response unencrypted_ephemeral (32 bytes starts at 12)
+         *  - cookie nonce (24 bytes starts at 8)
+         *  - data encrypted packet (var length starts at 16)
+         *  - keepalive random poly1305 tag (16 bytes starts at 16)
+         */
+        p64 = (u64 *)(buf + 16);
+
+        /* add a constant 42 to avoid accidentally use the same chacha input
+         * elsewhere
+         */
+        chacha_input = *p64 + 42;
 
         r = 0;
         while (1) {
@@ -196,7 +208,7 @@ static unsigned int xt_obfs(struct sk_buff *skb,
          * short string if WG packet is big.
          */
         max_rnd_len = (wg_data_len > 200) ? 8 : MAX_RND_LEN;
-        rnd_len = get_prn_insert(buf_udp, skb->tstamp, &ob, info->chacha_key,
+        rnd_len = get_prn_insert(buf_udp, &ob, info->chacha_key,
                                  MIN_RND_LEN, max_rnd_len);
         ob.rnd_len = rnd_len;
         if (prepare_skb_for_insert(skb, rnd_len))
