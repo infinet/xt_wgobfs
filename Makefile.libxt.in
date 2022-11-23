@@ -1,0 +1,34 @@
+# -*- Makefile -*-
+
+abs_top_srcdir  = @abs_top_srcdir@
+
+prefix          = @prefix@
+exec_prefix     = @exec_prefix@
+libexecdir      = @libexecdir@
+xtlibdir        = @xtlibdir@
+
+CC              = @CC@
+CCLD            = ${CC}
+CFLAGS          = @CFLAGS@
+LDFLAGS         = @LDFLAGS@
+
+libxtables_CFLAGS = @libxtables_CFLAGS@
+libxtables_LIBS   = @libxtables_LIBS@
+AM_DEPFLAGS     = -Wp,-MMD,$(@D)/.$(@F).d,-MT,$@
+
+TARGET = libxt_WGOBFS.so
+
+.PHONY: all install clean
+all: ${TARGET}
+
+install:
+	install -pm0755 ${TARGET} "${DESTDIR}/${xtlibdir}"
+
+clean:
+	rm -f *.oo *.so;
+
+${TARGET}: libxt_WGOBFS.oo
+	${CCLD} ${AM_LDFLAGS} -shared ${LDFLAGS} -o $@ $< ${libxtables_LIBS} ${LDLIBS}
+
+%.oo: %.c
+	${CC} ${AM_DEPFLAGS} ${AM_CPPFLAGS} ${AM_CFLAGS} -DPIC -fPIC ${CPPFLAGS} ${CFLAGS} -o $@ -c $<

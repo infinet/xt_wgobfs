@@ -24,18 +24,21 @@ Tested working on Alpine linux kernel 5.15 and CentOS 7 kernel 3.10.
 
 ### Build and install
 
-Run `make` in kernel/ to build kernel module. `sudo make install` will install
-the kernel module; or, copy `xt_WGOBFS.ko` to
-/lib/modules/yourkernelversion/kernel/net/netfilter/ manually, followed by
-`depmod -a && modprobe xt_WGOBFS`.
+Build:
 
-Run `make` in xtables/ to build iptables extension. Copy `libxt_WGOBFS.so` to
-xtables directory.
+```shell
+./autogen.sh
+./configure
+make
+```
 
-    - Alpine: /usr/lib/xtables/
-    - CentOS 7: /usr/lib64/xtables
-    - Debian: /usr/lib/x86_64-linux-gnu/xtables
+Install:
 
+```shell
+sudo make install
+```
+
+One may need run `depmod -a && modprobe xt_WGOBFS` to load the kernel module.
 
 ### Usage
 
