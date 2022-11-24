@@ -76,6 +76,11 @@ Iperf3 over wg reports 1.1Gbits/sec without obfuscation, 950Mbits/sec with
 obfuscation.
 
 
+### OpenWrt
+
+See [openwrt/package/README.md](/openwrt/package/README.md)
+
+
 ### License
 
 GPL v2
