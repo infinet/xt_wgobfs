@@ -75,6 +75,7 @@ static void obfs_mac2(u8 *buf, const int data_len, struct obfs_buf *ob,
         struct wg_message_handshake_initiation *hsi;
         struct wg_message_handshake_response *hsr;
         u32 *np;
+        u64 *p64;
 
         type = buf[0];
         if (type == WG_HANDSHAKE_INIT && data_len == 148) {
@@ -85,10 +86,11 @@ static void obfs_mac2(u8 *buf, const int data_len, struct obfs_buf *ob,
                         return;
 
                 /* Generate pseudo-random bytes as mac2.
-                 * - Use 8th - 16th byte of WG packet as input of chacha8
+                 * - Use 8th - 15th byte of WG packet as input of chacha8
                  * - Write 128bits output to mac2
                  */
-                chacha8_hash((const u64)(buf + 8), k, ob->chacha_out);
+                p64 = (u64 *)(buf + 8);
+                chacha8_hash((const u64)*p64, k, ob->chacha_out);
                 memcpy(hsi->macs.mac2, ob->chacha_out, WG_COOKIE_LEN);
 
                 /* mark the packet as need restore mac2 upon receiving */
@@ -100,7 +102,8 @@ static void obfs_mac2(u8 *buf, const int data_len, struct obfs_buf *ob,
                 if (*np)
                         return;
 
-                chacha8_hash((const u64)(buf + 8), k, ob->chacha_out);
+                p64 = (u64 *)(buf + 8);
+                chacha8_hash((const u64)*p64, k, ob->chacha_out);
                 memcpy(hsr->macs.mac2, ob->chacha_out, WG_COOKIE_LEN);
                 buf[0] |= 0x10;
         }
@@ -110,7 +113,7 @@ static int random_drop_wg_keepalive(u8 *buf, const int len, const u8 *key)
 {
         u8 type;
         u8 buf_prn[CHACHA8_OUTPUT_SIZE];
-        u64 *chacha_input;
+        u64 *p64;
 
         type = *buf;
         if (type != WG_DATA || len != 32)
@@ -118,8 +121,8 @@ static int random_drop_wg_keepalive(u8 *buf, const int len, const u8 *key)
 
         /* generate a pseudo-random string by hashing last 8 bytes of keepalive
          * message. We can assume the probability of s[0] > 50 is 0.8 */
-        chacha_input = (u64 *)(buf + len - CHACHA8_INPUT_SIZE);
-        chacha8_hash((const u64)*chacha_input, key, buf_prn);
+        p64 = (u64 *)(buf + len - CHACHA8_INPUT_SIZE);
+        chacha8_hash((const u64)*p64, key, buf_prn);
         if (buf_prn[0] > 50)
                 return 1;
         else
@@ -144,7 +147,7 @@ static void obfs_wg(u8 *buf, const int len, struct obfs_buf *ob, const u8 *key)
         u8 *b;
         u8 rnd_len;
         int i;
-        u64 *chacha_input;
+        u64 *p64;
 
         obfs_mac2(buf, len, ob, key);
         rnd_len = ob->rnd_len;
@@ -154,8 +157,8 @@ static void obfs_wg(u8 *buf, const int len, struct obfs_buf *ob, const u8 *key)
          * Use it to XOR with the first 16 bytes of WG message. It has message
          * type, reserved field and counter. They look distinct.
          */
-        chacha_input = (u64 *)(buf + len + rnd_len - CHACHA8_INPUT_SIZE - 1);
-        chacha8_hash((const u64)*chacha_input, key, ob->chacha_out);
+        p64 = (u64 *)(buf + len + rnd_len - CHACHA8_INPUT_SIZE - 1);
+        chacha8_hash((const u64)*p64, key, ob->chacha_out);
 
         /* set the last byte of random as its length */
         buf[len + rnd_len - 1] = rnd_len ^ ob->chacha_out[16];
@@ -271,14 +274,14 @@ static int restore_wg(u8 *buf, int len, const u8 *key)
         u8 buf_prn[CHACHA8_OUTPUT_SIZE];
         u8 *head;
         int i, rnd_len;
-        u64 *chacha_input;
+        u64 *p64;
 
         /* Same as obfuscate, generate the same pseudo-random string from last
          * 9 to 2 bytes of UDP packet. Need it for restoring the first 16 bytes
          * of WG packet.
          */
-        chacha_input = (u64 *)(buf + len - CHACHA8_INPUT_SIZE - 1);
-        chacha8_hash((const u64)*chacha_input, key, buf_prn);
+        p64 = (u64 *)(buf + len - CHACHA8_INPUT_SIZE - 1);
+        chacha8_hash((const u64)*p64, key, buf_prn);
 
         /* Restore the length of random padding. It is stored in the last byte
          * of obfuscated WG.
@@ -418,5 +421,5 @@ module_exit(wg_obfs_target_exit);
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("Iptables obfuscation module for WireGuard");
 MODULE_AUTHOR("Wei Chen <weichen302@gmail.com>");
-MODULE_VERSION("0.2");
+MODULE_VERSION("0.3");
 MODULE_ALIAS("xt_WGOBFS");
