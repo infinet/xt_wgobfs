@@ -33,3 +33,15 @@ libxt-install:
 
 libxt-clean:
 	${MAKE} ${_mcall} clean
+
+tmpdir := $(shell mktemp -dtu)
+packer  = xz
+packext = .tar.xz
+
+.PHONY: tarball
+tarball:
+	mkdir ${tmpdir}
+	pushd ${top_srcdir} && git archive --prefix=${PACKAGE_NAME}-${PACKAGE_VERSION}/ HEAD | tar -C ${tmpdir} -x && popd;
+	pushd ${tmpdir}/${PACKAGE_NAME}-${PACKAGE_VERSION} && autoreconf -fi && rm -Rf autom4te*.cache && popd;
+	tar --use=${packer} -C ${tmpdir} -cf ${PACKAGE_NAME}-${PACKAGE_VERSION}${packext} --owner=root --group=root ${PACKAGE_NAME}-${PACKAGE_VERSION}/;
+	rm -Rf ${tmpdir};
