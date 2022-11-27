@@ -5,10 +5,11 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=xt_wgobfs
+PKG_NAME:=xtables-wgobfs
 PKG_VERSION:=0.3
 PKG_RELEASE:=1
 
+PKG_BUILD_DIR:=$(BUILD_DIR)/xt_wgobfs-$(PKG_VERSION)
 PKG_SOURCE:=xt_wgobfs-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:= https://github.com/infinet/xt_wgobfs/releases/download/v$(PKG_VERSION)/
 PKG_HASH:=a8f88a1bcb9b92a6f3576495abc91f583bc98b08af4bcb55094b95c9c1333a5b
@@ -24,7 +25,7 @@ PKG_MAINTAINER:=Wei Chen <weichen302@gmail.com>
 include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/package.mk
 
-define Package/xt_wgobfs
+define Package/xtables-wgobfs
 	SECTION:=net
 	CATEGORY:=Network
 	SUBMENU:=Firewall
@@ -34,7 +35,7 @@ define Package/xt_wgobfs
 	DEPENDS:= +iptables +kmod-ipt-core +libxtables
 endef
 
-define Package/xt_wgobfs/description
+define Package/xtables-wgobfs/description
 	An iptables extension for WireGuard obfuscation
 endef
 
@@ -63,7 +64,7 @@ define Build/Install
 endef
 
 define Package/iptables-mod-wgobfs
-	$(call Package/xt_wgobfs)
+	$(call Package/xtables-wgobfs)
 	CATEGORY:=Network
 	TITLE:=WireGuard obfuscation iptables extension
 	DEPENDS:=+iptables +kmod-ipt-wgobfs
@@ -79,7 +80,7 @@ endef
 define KernelPackage/ipt-wgobfs
 	SUBMENU:=Netfilter Extensions
 	TITLE:=WireGuard obfuscation netfilter module
-	DEPENDS:=+kmod-ipt-core +kmod-ipt-compat-xtables
+	DEPENDS:=+kmod-ipt-core
 	FILES:=$(PKG_BUILD_DIR)/src/xt_WGOBFS.$(LINUX_KMOD_SUFFIX)
 	AUTOLOAD:=$(call AutoProbe,xt_WGOBFS)
 endef
