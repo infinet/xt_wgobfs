@@ -69,6 +69,17 @@ iptables -t mangle -I OUTPUT -p udp -m udp --sport 6789 -j WGOBFS --key mysecret
 Mangle FORWARD chain shall also work.
 
 
+## TCP MSS fix
+
+It is necessary to clamp TCP MSS on TCP traffic over tunnel. Symptoms of TCP
+MSS problems including HTTP not working on some websites, ssh works but scp
+doesn’t work.
+
+```shell
+iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+```
+
+
 ### Performance
 
 Test in two Alpine linux VMs on same host. Each VM has 1 CPU and 256M RAM.
