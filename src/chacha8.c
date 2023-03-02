@@ -86,7 +86,11 @@ void chacha8_hash(const u64 nonce, const u8 key[CHACHA20_KEY_SIZE], u8 *out)
         __le32 *stream = (__le32 *) out;
         int i;
 
+#ifdef __BIG_ENDIAN
+	chacha20_init(&ctx, key, cpu_to_le64(nonce));
+#else
 	chacha20_init(&ctx, key, nonce);
+#endif
 
 	for (i = 0; i < CHACHA20_BLOCK_WORDS; ++i)
 		x[i] = ctx.state[i];
