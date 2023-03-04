@@ -19,8 +19,7 @@ Tested working on Alpine linux kernel 5.15 and CentOS 7 kernel 3.10.
 
 - Alpine: alpine-sdk, iptables-dev, linux-lts-dev or linux-virt-dev
 - CentOS 7: iptables-devel, kernel-devel
-- Debian: iptables-dev, linux-headers
-
+- Debian 10/11 : linux-headers, autoconf, libtool, libxtables-dev, pkg-config
 
 ### Build and install
 
