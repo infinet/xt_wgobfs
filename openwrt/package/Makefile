@@ -6,13 +6,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=xtables-wgobfs
-PKG_VERSION:=0.4
+PKG_VERSION:=0.4.1
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/xt_wgobfs-$(PKG_VERSION)
 PKG_SOURCE:=xt_wgobfs-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:= https://github.com/infinet/xt_wgobfs/releases/download/v$(PKG_VERSION)/
-PKG_HASH:=59e89d904035bb51d9c2efc96957f13bb95a75fc532a20e059d916aa2d4d56da
+PKG_HASH:=5ea0e36ac96816e558132fdaa49746af53ab0f71c690baac6ca29e5561efe584
 
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=COPYING
