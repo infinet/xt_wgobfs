@@ -139,7 +139,7 @@ static struct xtables_target wg_obfs_reg[] = {
           },
 };
 
-static void _init(void)
+static void __attribute__((constructor)) _init(void)
 {
         xtables_register_targets(wg_obfs_reg,
                                  sizeof(wg_obfs_reg) / sizeof(*wg_obfs_reg));
