@@ -122,8 +122,7 @@ static void wg_obfs_save(const void *u, const struct xt_entry_target *tgt)
                 printf(" --key %s --unobfs", info->key);
 }
 
-static struct xtables_target wg_obfs_reg[] = {
-        {
+static struct xtables_target wg_obfs_reg = {
          .version = XTABLES_VERSION,
          .name = "WGOBFS",
          .revision = 0,
@@ -136,11 +135,9 @@ static struct xtables_target wg_obfs_reg[] = {
          .print = wg_obfs_print,
          .save = wg_obfs_save,
          .extra_opts = wg_obfs_opts,
-          },
 };
 
-static void __attribute__((constructor)) _init(void)
+static __attribute__((constructor)) void wg_obfs_ldr(void)
 {
-        xtables_register_targets(wg_obfs_reg,
-                                 sizeof(wg_obfs_reg) / sizeof(*wg_obfs_reg));
+        xtables_register_target(&wg_obfs_reg);
 }
