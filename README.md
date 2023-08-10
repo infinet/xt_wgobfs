@@ -1,6 +1,6 @@
 # Iptables WireGuard obfuscation extension
 
-The sender and receiver share a secret key, which is used by chacha8 to hash
+The sender and receiver share a secret key, which is used by `chacha8` to hash
 the same input into identical pseudo-random numbers. These pseudo-random
 numbers are used in obfuscation.
 
@@ -10,7 +10,7 @@ numbers are used in obfuscation.
 - Drop keepalive message with 80% probability.
 - Change the Diffserv field to zero.
 
-Chacha8 is used here since the goal is not encryption.
+`Chacha8` is chosen for its speed, as the goal is not encryption.
 
 Tested working on Alpine linux kernel 5.15 and CentOS 7 kernel 3.10.
 
@@ -65,10 +65,31 @@ iptables -t mangle -I INPUT -p udp -m udp --dport 6789 -j WGOBFS --key mysecretk
 iptables -t mangle -I OUTPUT -p udp -m udp --sport 6789 -j WGOBFS --key mysecretkey --obfs
 ```
 
-Mangle FORWARD chain shall also work.
+### As a relay
+
+Since this is a Linux kernel module, users on Windows, Mac, or mobile devices
+will not be able to use it directly. However, a possible workaround is to use it
+through a relay.
+
+For setting it up on a relay server (assuming default policy for FORWARD chain is
+ACCEPT):
 
 
-## TCP MSS fix
+```shell
+iptables -t nat -A PREROUTING -p udp -d RELAY_WAN_IP --dport 6789 -j DNAT --to-destination real_wg_server_ip:6789
+iptables -t nat -A POSTROUTING -p udp -d real_wg_server_ip --dport 6789 -j MASQUERADE
+
+iptables -t mangle -A FORWARD -p udp -d real_wg_server_ip --dport 6789 -j WGOBFS --key mysecretkey --obfs
+iptables -t mangle -A FORWARD -p udp -s real_wg_server_ip --sport 6789 -j WGOBFS --key mysecretkey --unobfs
+
+```
+
+Windows, Mac or mobile clients then use the IP and port of the relay as WG
+server endpoint. The setup for the remote WG server is the same as in previous
+section.
+
+
+### TCP MSS fix
 
 It is necessary to clamp TCP MSS on TCP traffic over tunnel. Symptoms of TCP
 MSS problems including HTTP not working on some websites, ssh works but scp
