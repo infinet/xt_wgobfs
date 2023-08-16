@@ -31,4 +31,4 @@ ${TARGET}: libxt_WGOBFS.oo
 	${CCLD} ${AM_LDFLAGS} -shared ${LDFLAGS} -o $@ $< ${libxtables_LIBS} ${LDLIBS}
 
 %.oo: %.c
-	${CC} ${AM_DEPFLAGS} ${AM_CPPFLAGS} ${AM_CFLAGS} -DPIC -fPIC ${CPPFLAGS} ${CFLAGS} -o $@ -c $<
+	${CC} ${AM_DEPFLAGS} ${AM_CPPFLAGS} ${AM_CFLAGS} -DPIC -fPIC ${CPPFLAGS} ${CFLAGS} -o $@ -c $< ${libxtables_CFLAGS}

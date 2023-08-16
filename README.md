@@ -12,14 +12,17 @@ numbers are used in obfuscation.
 
 `Chacha8` is chosen for its speed, as the goal is not encryption.
 
-Tested working on Alpine linux kernel 5.15 and CentOS 7 kernel 3.10.
+Tested working on Alpine linux kernel 5.15, CentOS 7, Debian 10/11/12 and
+openSUSE 15.5.
 
 
 ### Build dependence
 
-- Alpine: alpine-sdk, iptables-dev, linux-lts-dev or linux-virt-dev
-- CentOS 7: iptables-devel, kernel-devel
-- Debian 10/11 : linux-headers, autoconf, libtool, libxtables-dev, pkg-config
+- Alpine: alpine-sdk iptables-dev linux-lts-dev or linux-virt-dev
+- CentOS 7: iptables-devel kernel-devel
+- Debian 10/11/12 : autoconf libtool libxtables-dev linux-headers pkg-config
+- openSUSE 15: autoconf automake gcc kernel-default-devel libtool libxtables-devel make
+
 
 ### Build and install
 
@@ -38,6 +41,15 @@ sudo make install
 ```
 
 One may need run `depmod -a && modprobe xt_WGOBFS` to load the kernel module.
+
+By default, openSUSE does not allow unsupported kernel modeule. To override,
+create or modify `/etc/modprobe.d/10-unsupported-modules.conf`, add the
+following line:
+
+```shell
+allow_unsupported_modules 1
+```
+
 
 ### Usage
 
