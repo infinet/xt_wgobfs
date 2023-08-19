@@ -1,4 +1,4 @@
-AC_INIT([xt_wgobfs], [0.4.1])
+AC_INIT([xt_wgobfs], [0.4.2])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
