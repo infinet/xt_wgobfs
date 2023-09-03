@@ -176,15 +176,14 @@ static int prepare_skb_for_insert(struct sk_buff *skb, int ntail)
         if (extra_len > 0) {
                 if (pskb_expand_head(skb, 0, extra_len, GFP_ATOMIC))
                         return -1;
-        } else {
+        }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0)
-                if (unlikely(skb_ensure_writable(skb, skb->len)))
+        if (unlikely(skb_ensure_writable(skb, skb->len)))
 #else
-                if (unlikely(!skb_make_writable(skb, skb->len)))
+        if (unlikely(!skb_make_writable(skb, skb->len)))
 #endif
-                        return -1;
-        }
+                return -1;
 
         skb_put(skb, ntail);
         return 0;
