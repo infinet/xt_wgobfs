@@ -4,8 +4,7 @@
  *
  * modified from Jason A. Donenfeld's wireguard, simd is not included
  */
-#include "chacha8.h"
-
+#include "chacha.h"
 
 enum chacha20_constants { /* expand 32-byte k */
 	CHACHA20_CONSTANT_EXPA = 0x61707865U,
@@ -27,7 +26,7 @@ struct chacha20_ctx {
 
 static inline void chacha20_init(struct chacha20_ctx *ctx,
                                  const u8 key[CHACHA20_KEY_SIZE],
-                                 const u64 nonce)
+                                 const u8 in[CHACHA_INPUT_SIZE])
 {
 	ctx->constant[0] = CHACHA20_CONSTANT_EXPA;
 	ctx->constant[1] = CHACHA20_CONSTANT_ND_3;
@@ -41,10 +40,10 @@ static inline void chacha20_init(struct chacha20_ctx *ctx,
 	ctx->key[5] = get_unaligned_le32(key + 20);
 	ctx->key[6] = get_unaligned_le32(key + 24);
 	ctx->key[7] = get_unaligned_le32(key + 28);
-	ctx->counter[0] = 0;
-	ctx->counter[1] = 0;
-	ctx->counter[2] = nonce & U32_MAX;
-	ctx->counter[3] = nonce >> 32;
+	ctx->counter[0] = get_unaligned_le32(in + 0);
+	ctx->counter[1] = get_unaligned_le32(in + 4);
+	ctx->counter[2] = get_unaligned_le32(in + 8);
+	ctx->counter[3] = get_unaligned_le32(in + 12);
 }
 
 #define QUARTER_ROUND(x, a, b, c, d) ( \
@@ -73,30 +72,36 @@ static inline void chacha20_init(struct chacha20_ctx *ctx,
 	QUARTER_ROUND(x, C(0, 3), C(1, 0), C(2, 1), C(3, 2)) \
 )
 
-#define EIGHT_ROUNDS(x) ( \
+#define SIX_ROUNDS(x) ( \
+	DOUBLE_ROUND(x), \
 	DOUBLE_ROUND(x), \
 	DOUBLE_ROUND(x) \
 )
 
-/* hash a 8 bytes nonce into a 64 bytes hash */
-void chacha8_hash(const u64 nonce, const u8 key[CHACHA20_KEY_SIZE], u8 *out)
+/* Hash 16 bytes input into 32 bytes hash. Only use 32 bytes of 64 bytes chacha
+ * output.
+ *
+ * Jean-Philippe Aumasson, https://eprint.iacr.org/2019/1492.pdf
+ *   - attack on chacha5 runs in 2^16 time(unknown unit)
+ *   - attack on chacha6 runs in 2^116 time
+ *
+ * Use chacha6 to generate PRN since WG is taking care of security.
+ */
+void chacha_hash(const u8 in[CHACHA_INPUT_SIZE],
+                 const u8 key[CHACHA20_KEY_SIZE], u8 *out, int out_words)
 {
 	struct chacha20_ctx ctx;
 	u32 x[CHACHA20_BLOCK_WORDS];
-        __le32 *stream = (__le32 *) out;
-        int i;
+	__le32 *stream = (__le32 *) out;
+	int i;
 
-#ifdef __BIG_ENDIAN
-	chacha20_init(&ctx, key, cpu_to_le64(nonce));
-#else
-	chacha20_init(&ctx, key, nonce);
-#endif
-
+	chacha20_init(&ctx, key, in);
 	for (i = 0; i < CHACHA20_BLOCK_WORDS; ++i)
 		x[i] = ctx.state[i];
 
-	EIGHT_ROUNDS(x);
+	SIX_ROUNDS(x);
 
-	for (i = 0; i < CHACHA8_OUTPUT_WORDS; ++i)
+	//for (i = 0; i < CHACHA_OUTPUT_WORDS; ++i)
+	for (i = 0; i < out_words; ++i)
 		stream[i] = cpu_to_le32(x[i] + ctx.state[i]);
 }

@@ -16,12 +16,12 @@ enum chacha_lengths {
 	CHACHA20_KEY_WORDS = CHACHA20_KEY_SIZE / sizeof(u32),
 	CHACHA20_BLOCK_SIZE = 64,
 	CHACHA20_BLOCK_WORDS = CHACHA20_BLOCK_SIZE / sizeof(u32),
-	CHACHA8_INPUT_SIZE = 8,
-	CHACHA8_OUTPUT_SIZE = 32,
-	CHACHA8_OUTPUT_WORDS = CHACHA8_OUTPUT_SIZE / sizeof(u32),
+	CHACHA_INPUT_SIZE = 16,
+	CHACHA_OUTPUT_SIZE = 32,
+	CHACHA_OUTPUT_WORDS = CHACHA_OUTPUT_SIZE / sizeof(u32),
 };
 
+void chacha_hash(const u8  in[CHACHA_INPUT_SIZE],
+                 const u8 key[CHACHA20_KEY_SIZE], u8 *out, int out_words);
 
-/* hash a 8 bytes nonce into a 64 bytes hash */
-void chacha8_hash(const u64 nonce, const u8 key[CHACHA20_KEY_SIZE], u8 *out);
 #endif /* _XT_CHACHA8_H */

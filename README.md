@@ -1,6 +1,6 @@
 # Iptables WireGuard obfuscation extension
 
-The sender and receiver share a secret key, which is used by `chacha8` to hash
+The sender and receiver share a secret key, which is used by `chacha6` to hash
 the same input into identical pseudo-random numbers. These pseudo-random
 numbers are used in obfuscation.
 
@@ -10,7 +10,7 @@ numbers are used in obfuscation.
 - Drop keepalive message with 80% probability.
 - Change the Diffserv field to zero.
 
-`Chacha8` is chosen for its speed, as the goal is not encryption.
+`Chacha6` is chosen for its speed, as the goal is not encryption.
 
 Tested working on Alpine linux kernel 5.15, CentOS 7, Debian 10/11/12 and
 openSUSE 15.5.
