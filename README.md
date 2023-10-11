@@ -50,6 +50,23 @@ following line:
 allow_unsupported_modules 1
 ```
 
+### DKMS
+
+You can use DKMS to automatically rebuild module on kernel upgrade.
+
+Dependence: dkms
+
+Install with DKMS:
+
+```shell
+git clone https://github.com/infinet/xt_wgobfs
+xt_wgobfs_version=$(sed -n 's/[[:space:]]*MODULE_VERSION("\([^"]*\)");/\1/p' xt_wgobfs/src/xt_WGOBFS_main.c)
+sudo mv xt_wgobfs /usr/src/xt_WGOBFS-$xt_wgobfs_version
+sudo dkms add -m xt_WGOBFS -v ${xt_wgobfs_version}
+sudo dkms build -m xt_WGOBFS -v ${xt_wgobfs_version}
+sudo dkms install -m xt_WGOBFS -v ${xt_wgobfs_version}
+```
+
 
 ### Usage
 

@@ -1,4 +1,4 @@
-AC_INIT([xt_wgobfs], [0.5.0])
+AC_INIT([xt_wgobfs], m4_esyscmd([sed -n 's/[[:space:]]*MODULE_VERSION("\([^"]*\)");/\1/p' src/xt_WGOBFS_main.c]))
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])

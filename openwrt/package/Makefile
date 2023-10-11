@@ -5,7 +5,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=xtables-wgobfs
-PKG_VERSION:=0.5.0
+PKG_VERSION:=$(sed -n 's/[[:space:]]*MODULE_VERSION("\([^"]*\)");/\1/p' ../../src/xt_WGOBFS_main.c)
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/xt_wgobfs-$(PKG_VERSION)
