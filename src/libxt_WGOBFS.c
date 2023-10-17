@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <xtables.h>
+#include <kernel.h>
 #include "xt_WGOBFS.h"
 
 enum {
@@ -122,22 +123,39 @@ static void wg_obfs_save(const void *u, const struct xt_entry_target *tgt)
                 printf(" --key %s --unobfs", info->key);
 }
 
-static struct xtables_target wg_obfs_reg = {
-         .version = XTABLES_VERSION,
-         .name = "WGOBFS",
-         .revision = 0,
-         .family = NFPROTO_IPV4,
-         .size =          XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
-         .userspacesize = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
-         .help = wg_obfs_help,
-         .parse = wg_obfs_parse,
-         .final_check = wg_obfs_check,
-         .print = wg_obfs_print,
-         .save = wg_obfs_save,
-         .extra_opts = wg_obfs_opts,
+static struct xtables_target wg_obfs_reg[] = {
+        {
+                 .version = XTABLES_VERSION,
+                 .name = "WGOBFS",
+                 .revision = 0,
+                 .family = NFPROTO_IPV4,
+                 .size =          XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
+                 .userspacesize = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
+                 .help = wg_obfs_help,
+                 .parse = wg_obfs_parse,
+                 .final_check = wg_obfs_check,
+                 .print = wg_obfs_print,
+                 .save = wg_obfs_save,
+                 .extra_opts = wg_obfs_opts,
+        },
+        {
+                 .version = XTABLES_VERSION,
+                 .name = "WGOBFS",
+                 .revision = 0,
+                 .family = NFPROTO_IPV6,
+                 .size =          XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
+                 .userspacesize = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
+                 .help = wg_obfs_help,
+                 .parse = wg_obfs_parse,
+                 .final_check = wg_obfs_check,
+                 .print = wg_obfs_print,
+                 .save = wg_obfs_save,
+                 .extra_opts = wg_obfs_opts,
+        },
 };
 
 static __attribute__((constructor)) void wg_obfs_ldr(void)
 {
-        xtables_register_target(&wg_obfs_reg);
+        xtables_register_targets(wg_obfs_reg,
+                sizeof(wg_obfs_reg) / sizeof(*wg_obfs_reg));
 }
