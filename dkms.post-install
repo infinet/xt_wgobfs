@@ -1,0 +1,6 @@
+#!/bin/sh
+PWD=$(eval pwd)
+built_module_dir="${PWD%/source*}/$kernelver/$arch/module"
+xtlibdir=$(pkg-config xtables --variable=xtlibdir)
+TARGET="$1"
+install -pm0755 "$built_module_dir/$TARGET" "$xtlibdir"

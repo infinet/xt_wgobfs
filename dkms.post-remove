@@ -1,0 +1,4 @@
+#!/bin/sh
+xtlibdir=$(pkg-config xtables --variable=xtlibdir)
+TARGET="$1"
+rm -f "$xtlibdir/$TARGET"
