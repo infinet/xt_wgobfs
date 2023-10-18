@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <getopt.h>
 #include <xtables.h>
-#include <kernel.h>
 #include "xt_WGOBFS.h"
 
 enum {

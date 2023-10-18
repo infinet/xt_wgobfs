@@ -10,11 +10,8 @@
 #include "wg.h"
 #include "chacha.h"
 
-#define CONFIG_IP6_NF_IPTABLES 1
 #if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
 #include <net/ipv6.h>
-//#include <net/if_inet6.h>
-//#include <net/addrconf.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 #endif
 
@@ -315,14 +312,9 @@ static unsigned int xt_obfs6(struct sk_buff *skb,
         /* packet with DiffServ 0x88 looks distinct? */
         ip6h = ipv6_hdr(skb);
         *(__be32 *)ip6h = *(__be32 *)ip6h & IPV6_TCLASS_MASK;
-        //ip6_flow_hdr(iph, 0, 0);
-        //iph->tos = 0;
 
         /* recalculate ip header checksum */
-	ip6h->payload_len = htons(ntohs(ip6h->payload_len) + rnd_len);
-        //iph->tot_len = htons(ntohs(iph->tot_len) + rnd_len);
-        //iph->check = 0;
-        //ip_send_check(iph);
+        ip6h->payload_len = htons(ntohs(ip6h->payload_len) + rnd_len);
 
         /* CHECKSUM_PARTIAL: The driver is required to checksum the packet.
          * With CHECKSUM_PARTIAL, the udp packet has good checksum in VM, bad
@@ -472,10 +464,7 @@ static unsigned int xt_unobfs6(struct sk_buff *skb,
 
         /* recalculate ip header checksum */
         ip6h = ipv6_hdr(skb);
-	ip6h->payload_len = htons(ntohs(ip6h->payload_len) - rnd_len);
-        //iph->tot_len = htons(ntohs(iph->tot_len) - rnd_len);
-        //iph->check = 0;
-        //ip_send_check(iph);
+        ip6h->payload_len = htons(ntohs(ip6h->payload_len) - rnd_len);
 
         /* recalculate udp header checksum */
         udph->len = htons(ntohs(udph->len) - rnd_len);
