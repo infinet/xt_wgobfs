@@ -2,4 +2,4 @@
 PWD=$(eval pwd)
 built_module_dir="${PWD%/build*}/$kernelver/$arch/module"
 TARGET="$1"
-cp "src/$TARGET" $built_module_dir
+cp "src/$TARGET" "$built_module_dir/"
