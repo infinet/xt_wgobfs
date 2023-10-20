@@ -311,7 +311,7 @@ static unsigned int xt_obfs6(struct sk_buff *skb,
 
         /* packet with DiffServ 0x88 looks distinct? */
         ip6h = ipv6_hdr(skb);
-        *(__be32 *)ip6h = *(__be32 *)ip6h & IPV6_TCLASS_MASK;
+        ip6_flow_hdr(ip6h, 0, ip6_flowlabel(ip6h));
 
         /* recalculate ip header checksum */
         ip6h->payload_len = htons(ntohs(ip6h->payload_len) + rnd_len);
