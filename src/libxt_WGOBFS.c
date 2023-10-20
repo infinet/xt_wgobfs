@@ -2,7 +2,6 @@
  * iptables WGOBFS target extension
  */
 #include <stdio.h>
-#include <limits.h>
 #include <string.h>
 #include <errno.h>
 #include <getopt.h>
@@ -156,5 +155,6 @@ static struct xtables_target wg_obfs_reg[] = {
 
 static __attribute__((constructor)) void wg_obfs_ldr(void)
 {
-        xtables_register_targets(wg_obfs_reg, ARRAY_SIZE(wg_obfs_reg));
+        xtables_register_targets(wg_obfs_reg,
+                sizeof(wg_obfs_reg) / sizeof(*wg_obfs_reg));
 }
