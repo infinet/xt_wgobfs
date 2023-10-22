@@ -19,6 +19,18 @@
 #define WG_MIN_LEN              32
 #define MIN_RND_LEN             4
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#define xt_action_param xt_target_param
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,3,0)
+static inline int
+skb_ensure_writable(struct sk_buff *skb, unsigned int write_len)
+{
+	return !skb_make_writable(skb, write_len);
+}
+#endif
+
 enum chacha_output_lengths {
 	MAX_RND_LEN = 32,
 	MAX_RND_WORDS = MAX_RND_LEN / sizeof(u32),
@@ -164,11 +176,7 @@ static int prepare_skb_for_insert(struct sk_buff *skb, int ntail)
                         return -1;
         }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0)
         if (unlikely(skb_ensure_writable(skb, skb->len)))
-#else
-        if (unlikely(!skb_make_writable(skb, skb->len)))
-#endif
                 return -1;
 
         skb_put(skb, ntail);
@@ -312,11 +320,7 @@ static unsigned int xt_unobfs(struct sk_buff *skb,
         int data_len;
         int rnd_len;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0)
         if (unlikely(skb_ensure_writable(skb, skb->len)))
-#else
-        if (unlikely(!skb_make_writable(skb, skb->len)))
-#endif
                 return NF_DROP;
 
         udph = udp_hdr(skb);
@@ -349,13 +353,8 @@ static unsigned int xt_unobfs(struct sk_buff *skb,
         return XT_CONTINUE;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 static unsigned int
 xt_wg_obfs_target(struct sk_buff *skb, const struct xt_action_param *par)
-#else
-static unsigned int
-xt_wg_obfs_target(struct sk_buff *skb, const struct xt_target_param *par)
-#endif
 {
         const struct xt_wg_obfs_info *info = par->targinfo;
         struct iphdr *iph;
@@ -373,7 +372,6 @@ xt_wg_obfs_target(struct sk_buff *skb, const struct xt_target_param *par)
         return XT_CONTINUE;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35)
 static int xt_wg_obfs_checkentry(const struct xt_tgchk_param *par)
 {
         if (strcmp(par->table, "mangle")) {
@@ -384,18 +382,6 @@ static int xt_wg_obfs_checkentry(const struct xt_tgchk_param *par)
 
         return 0;
 }
-#else
-static bool xt_wg_obfs_checkentry(const struct xt_tgchk_param *par)
-{
-        if (strcmp(par->table, "mangle")) {
-                printk(KERN_WARNING
-                       "WGOBFS: can only be called from mangle table\n");
-                return false;
-        }
-
-        return true;
-}
-#endif
 
 static struct xt_target xt_wg_obfs = {
         .name = "WGOBFS",
