@@ -372,7 +372,6 @@ xt_wg_obfs_target(struct sk_buff *skb, const struct xt_action_param *par)
         return XT_CONTINUE;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35)
 static int xt_wg_obfs_checkentry(const struct xt_tgchk_param *par)
 {
         if (strcmp(par->table, "mangle")) {
@@ -383,18 +382,6 @@ static int xt_wg_obfs_checkentry(const struct xt_tgchk_param *par)
 
         return 0;
 }
-#else
-static bool xt_wg_obfs_checkentry(const struct xt_tgchk_param *par)
-{
-        if (strcmp(par->table, "mangle")) {
-                printk(KERN_WARNING
-                       "WGOBFS: can only be called from mangle table\n");
-                return false;
-        }
-
-        return true;
-}
-#endif
 
 static struct xt_target xt_wg_obfs = {
         .name = "WGOBFS",
