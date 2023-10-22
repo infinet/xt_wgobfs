@@ -19,6 +19,10 @@
 #define WG_MIN_LEN              32
 #define MIN_RND_LEN             4
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#define xt_action_param xt_target_param
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,3,0)
 static inline int
 skb_ensure_writable(struct sk_buff *skb, unsigned int write_len)
@@ -349,13 +353,8 @@ static unsigned int xt_unobfs(struct sk_buff *skb,
         return XT_CONTINUE;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 static unsigned int
 xt_wg_obfs_target(struct sk_buff *skb, const struct xt_action_param *par)
-#else
-static unsigned int
-xt_wg_obfs_target(struct sk_buff *skb, const struct xt_target_param *par)
-#endif
 {
         const struct xt_wg_obfs_info *info = par->targinfo;
         struct iphdr *iph;
