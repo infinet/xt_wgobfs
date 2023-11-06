@@ -256,11 +256,11 @@ static unsigned int xt_obfs4(struct sk_buff *skb,
         iph->check = 0;
         ip_send_check(iph);
 
-        /* CHECKSUM_PARTIAL: The driver is required to checksum the packet.
-         * With CHECKSUM_PARTIAL, the udp packet has good checksum in VM, bad
-         * checksum after leave VM. Set to CHECKSUM_NONE fixes the problem.
+        /* since we change the packet pretend that
+         * driver did not checksum it
          */
-        if (skb->ip_summed == CHECKSUM_PARTIAL)
+        if (skb->ip_summed == CHECKSUM_PARTIAL ||
+            skb->ip_summed == CHECKSUM_COMPLETE)
                 skb->ip_summed = CHECKSUM_NONE;
 
         /* recalculate udp header checksum */
@@ -412,6 +412,13 @@ static unsigned int xt_unobfs4(struct sk_buff *skb,
         iph->tot_len = htons(ntohs(iph->tot_len) - rnd_len);
         iph->check = 0;
         ip_send_check(iph);
+
+        /* since we change the packet pretend that
+         * driver did not checksum it
+         */
+        if (skb->ip_summed == CHECKSUM_PARTIAL ||
+            skb->ip_summed == CHECKSUM_COMPLETE)
+                skb->ip_summed = CHECKSUM_NONE;
 
         /* recalculate udp header checksum */
         udph = udp_hdr(skb);
