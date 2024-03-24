@@ -180,18 +180,17 @@ static int prepare_skb_for_insert(struct sk_buff *skb, int ntail)
         return 0;
 }
 
-static unsigned int xt_obfs4(struct sk_buff *skb,
-                            const struct xt_wg_obfs_info *info)
+static unsigned int xt_obfs_udp_payload(struct sk_buff *skb, u8 *rnd_len_out,
+                                        const struct xt_wg_obfs_info *info)
 {
         struct obfs_buf ob;
-        struct iphdr *iph;
         struct udphdr *udph;
         int wg_data_len, max_rnd_len;
         u8 rnd_len;
         u8 *buf_udp;
 
         udph = udp_hdr(skb);
-        buf_udp = (u8 *) udph + sizeof(struct udphdr);
+        buf_udp = (u8 *)udph + sizeof(struct udphdr);
         wg_data_len = ntohs(udph->len) - sizeof(struct udphdr);
 
         /* Use 16th to 31st bytes of WG message as input of chacha.
@@ -214,24 +213,41 @@ static unsigned int xt_obfs4(struct sk_buff *skb,
          */
         ob.chacha_in[0] += 42;
 
-        if (random_drop_wg_keepalive(buf_udp, wg_data_len, &ob, info->chacha_key))
+        if (random_drop_wg_keepalive(buf_udp, wg_data_len, &ob,
+                                     info->chacha_key))
                 return NF_DROP;
 
         /* Insert a long pseudo-random string if the WG packet is small, or a
          * short string if WG packet is big.
          */
         max_rnd_len = (wg_data_len > 200) ? 8 : MAX_RND_LEN;
-        rnd_len = get_prn_insert(buf_udp, &ob, info->chacha_key,
-                                 MIN_RND_LEN, max_rnd_len);
+        rnd_len = get_prn_insert(buf_udp, &ob, info->chacha_key, MIN_RND_LEN,
+                                 max_rnd_len);
         ob.rnd_len = rnd_len;
         if (prepare_skb_for_insert(skb, rnd_len))
                 return NF_DROP;
 
         udph = udp_hdr(skb);
-        buf_udp = (u8 *) udph + sizeof(struct udphdr);
+        buf_udp = (u8 *)udph + sizeof(struct udphdr);
         obfs_wg(buf_udp, wg_data_len, &ob, info->chacha_key);
 
-        /* packet with DiffServ 0x88 looks distinct? */
+        *rnd_len_out = rnd_len;
+        return XT_CONTINUE;
+}
+
+static unsigned int xt_obfs4(struct sk_buff *skb,
+                             const struct xt_wg_obfs_info *info)
+{
+        struct iphdr *iph;
+        struct udphdr *udph;
+        u8 rnd_len;
+        unsigned int rc;
+
+        rc = xt_obfs_udp_payload(skb, &rnd_len, info);
+        if (XT_CONTINUE != rc)
+                return rc;
+
+        /* packet with DiffServ 0x88 looks distinct, reset to 0 */
         iph = ip_hdr(skb);
         iph->tos = 0;
 
@@ -248,70 +264,31 @@ static unsigned int xt_obfs4(struct sk_buff *skb,
                 skb->ip_summed = CHECKSUM_NONE;
 
         /* recalculate udp header checksum */
+        udph = udp_hdr(skb);
         udph->len = htons(ntohs(udph->len) + rnd_len);
         udph->check = 0;
-        udph->check = csum_tcpudp_magic(iph->saddr, iph->daddr,
-                                        ntohs(udph->len), IPPROTO_UDP,
-                                        csum_partial((char *) udph,
-                                                     ntohs(udph->len), 0));
+        udph->check = csum_tcpudp_magic(
+                iph->saddr, iph->daddr, ntohs(udph->len), IPPROTO_UDP,
+                csum_partial((char *)udph, ntohs(udph->len), 0));
         return XT_CONTINUE;
 }
 
 #if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
 static unsigned int xt_obfs6(struct sk_buff *skb,
-                            const struct xt_wg_obfs_info *info)
+                             const struct xt_wg_obfs_info *info)
 {
-        struct obfs_buf ob;
         struct ipv6hdr *ip6h;
         struct udphdr *udph;
-        int wg_data_len, max_rnd_len;
         u8 rnd_len;
-        u8 *buf_udp;
+        unsigned int rc;
 
-        udph = udp_hdr(skb);
-        buf_udp = (u8 *) udph + sizeof(struct udphdr);
-        wg_data_len = ntohs(udph->len) - sizeof(struct udphdr);
+        rc = xt_obfs_udp_payload(skb, &rnd_len, info);
+        if (XT_CONTINUE != rc)
+                return rc;
 
-        /* Use 16th to 31st bytes of WG message as input of chacha.
-         *
-         * The 16th to 31st bytes is:
-         *  - handshake initiation unencrypted_ephemeral (32 bytes starts at 8)
-         *  - handshake response unencrypted_ephemeral (32 bytes starts at 12)
-         *  - cookie nonce (24 bytes starts at 8)
-         *  - data encrypted packet (var length starts at 16)
-         *  - keepalive random poly1305 tag (16 bytes starts at 16)
-         *
-         *  Increment the first byte as counter to generate different PRN
-         */
-        memcpy(&(ob.chacha_in), buf_udp + 16, CHACHA_INPUT_SIZE);
-
-        /* Later will use the unchange 16th to 31st bytes to gernerate a PRN,
-         * which XOR with first 16 bytes of WG. Peer will need generate an
-         * identical PRN to recover the original WG.
-         * Other PRNs will be generated with incremented counter.
-         */
-        ob.chacha_in[0] += 42;
-
-        if (random_drop_wg_keepalive(buf_udp, wg_data_len, &ob, info->chacha_key))
-                return NF_DROP;
-
-        /* Insert a long pseudo-random string if the WG packet is small, or a
-         * short string if WG packet is big.
-         */
-        max_rnd_len = (wg_data_len > 200) ? 8 : MAX_RND_LEN;
-        rnd_len = get_prn_insert(buf_udp, &ob, info->chacha_key,
-                                 MIN_RND_LEN, max_rnd_len);
-        ob.rnd_len = rnd_len;
-        if (prepare_skb_for_insert(skb, rnd_len))
-                return NF_DROP;
-
-        udph = udp_hdr(skb);
-        buf_udp = (u8 *) udph + sizeof(struct udphdr);
-        obfs_wg(buf_udp, wg_data_len, &ob, info->chacha_key);
-
-        /* packet with DiffServ 0x88 looks distinct? */
+        /* packet with DiffServ 0x88 looks distinct, reset to 0 */
         ip6h = ipv6_hdr(skb);
-        ip6_flow_hdr(ip6h, 0, ip6_flowlabel(ip6h));
+        ip6_flow_hdr(ip6h, 0, htonl(0));
 
         /* recalculate ip header checksum */
         ip6h->payload_len = htons(ntohs(ip6h->payload_len) + rnd_len);
@@ -324,12 +301,12 @@ static unsigned int xt_obfs6(struct sk_buff *skb,
                 skb->ip_summed = CHECKSUM_NONE;
 
         /* recalculate udp header checksum */
+        udph = udp_hdr(skb);
         udph->len = htons(ntohs(udph->len) + rnd_len);
         udph->check = 0;
-        udph->check = csum_ipv6_magic(&ip6h->saddr, &ip6h->daddr,
-                                      ntohs(udph->len), IPPROTO_UDP,
-                                      csum_partial((char *) udph,
-                                                   ntohs(udph->len), 0));
+        udph->check = csum_ipv6_magic(
+                &ip6h->saddr, &ip6h->daddr, ntohs(udph->len), IPPROTO_UDP,
+                csum_partial((char *)udph, ntohs(udph->len), 0));
         return XT_CONTINUE;
 }
 #endif
@@ -356,11 +333,12 @@ static void restore_mac2(u8 *buf)
         buf[0] &= 0x0F;
 }
 
-static int restore_wg(u8 *buf, int len, const u8 *key)
+static u8 restore_wg(u8 *buf, int len, const u8 *key)
 {
         u8 buf_prn[MAX_RND_LEN];
         u8 *head;
-        int i, rnd_len;
+        int i;
+        u8 rnd_len;
 
         /* Same as obfuscate, generate the same PRN from 16th to 31st bytes of
          * WG message. Need it for restoring the first 16 bytes of WG message.
@@ -372,9 +350,9 @@ static int restore_wg(u8 *buf, int len, const u8 *key)
          */
         buf[len - 1] ^= buf_prn[16];
 
-        rnd_len = (int) buf[len - 1];
-        if (rnd_len + WG_MIN_LEN > len)
-                return -1;
+        rnd_len = (u8)buf[len - 1];
+        if (rnd_len == 0 || rnd_len + WG_MIN_LEN > len)
+                return 0;
 
         /* restore the first 16 bytes of WG packet */
         head = buf;
@@ -385,16 +363,15 @@ static int restore_wg(u8 *buf, int len, const u8 *key)
         return rnd_len;
 }
 
-static unsigned int xt_unobfs4(struct sk_buff *skb,
-                              const struct xt_wg_obfs_info *info)
+static int xt_unobfs_udp_payload(struct sk_buff *skb, u8 *rnd_len_out,
+                                 const struct xt_wg_obfs_info *info)
 {
-        struct iphdr *iph;
         struct udphdr *udph;
         u8 *buf_udp;
         int data_len;
-        int rnd_len;
+        u8 rnd_len;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)
         if (unlikely(skb_ensure_writable(skb, skb->len)))
 #else
         if (unlikely(!skb_make_writable(skb, skb->len)))
@@ -402,18 +379,33 @@ static unsigned int xt_unobfs4(struct sk_buff *skb,
                 return NF_DROP;
 
         udph = udp_hdr(skb);
-        buf_udp = (u8 *) udph + sizeof(struct udphdr);
+        buf_udp = (u8 *)udph + sizeof(struct udphdr);
         data_len = ntohs(udph->len) - sizeof(struct udphdr);
         /* random bytes insertion adds at least 4 bytes */
         if (data_len < MIN_RND_LEN)
                 return NF_DROP;
 
         rnd_len = restore_wg(buf_udp, data_len, info->chacha_key);
-        if (rnd_len < 0)
+        if (rnd_len == 0)
                 return NF_DROP;
 
         skb->len -= rnd_len;
         skb->tail -= rnd_len;
+        *rnd_len_out = rnd_len;
+        return XT_CONTINUE;
+}
+
+static unsigned int xt_unobfs4(struct sk_buff *skb,
+                               const struct xt_wg_obfs_info *info)
+{
+        struct iphdr *iph;
+        struct udphdr *udph;
+        u8 rnd_len;
+        unsigned int rc;
+
+        rc = xt_unobfs_udp_payload(skb, &rnd_len, info);
+        if (XT_CONTINUE != rc)
+                return rc;
 
         /* recalculate ip header checksum */
         iph = ip_hdr(skb);
@@ -422,57 +414,38 @@ static unsigned int xt_unobfs4(struct sk_buff *skb,
         ip_send_check(iph);
 
         /* recalculate udp header checksum */
+        udph = udp_hdr(skb);
         udph->len = htons(ntohs(udph->len) - rnd_len);
         udph->check = 0;
-        udph->check = csum_tcpudp_magic(iph->saddr, iph->daddr,
-                                        ntohs(udph->len), IPPROTO_UDP,
-                                        csum_partial((char *) udph,
-                                                     ntohs(udph->len), 0));
+        udph->check = csum_tcpudp_magic(
+                iph->saddr, iph->daddr, ntohs(udph->len), IPPROTO_UDP,
+                csum_partial((char *)udph, ntohs(udph->len), 0));
         return XT_CONTINUE;
 }
 
 #if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
 static unsigned int xt_unobfs6(struct sk_buff *skb,
-                              const struct xt_wg_obfs_info *info)
+                               const struct xt_wg_obfs_info *info)
 {
         struct ipv6hdr *ip6h;
         struct udphdr *udph;
-        u8 *buf_udp;
-        int data_len;
-        int rnd_len;
+        u8 rnd_len;
+        unsigned int rc;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,0)
-        if (unlikely(skb_ensure_writable(skb, skb->len)))
-#else
-        if (unlikely(!skb_make_writable(skb, skb->len)))
-#endif
-                return NF_DROP;
+        rc = xt_unobfs_udp_payload(skb, &rnd_len, info);
+        if (XT_CONTINUE != rc)
+                return rc;
 
-        udph = udp_hdr(skb);
-        buf_udp = (u8 *) udph + sizeof(struct udphdr);
-        data_len = ntohs(udph->len) - sizeof(struct udphdr);
-        /* random bytes insertion adds at least 4 bytes */
-        if (data_len < MIN_RND_LEN)
-                return NF_DROP;
-
-        rnd_len = restore_wg(buf_udp, data_len, info->chacha_key);
-        if (rnd_len < 0)
-                return NF_DROP;
-
-        skb->len -= rnd_len;
-        skb->tail -= rnd_len;
-
-        /* recalculate ip header checksum */
         ip6h = ipv6_hdr(skb);
         ip6h->payload_len = htons(ntohs(ip6h->payload_len) - rnd_len);
 
         /* recalculate udp header checksum */
+        udph = udp_hdr(skb);
         udph->len = htons(ntohs(udph->len) - rnd_len);
         udph->check = 0;
-        udph->check = csum_ipv6_magic(&ip6h->saddr, &ip6h->daddr,
-                                      ntohs(udph->len), IPPROTO_UDP,
-                                      csum_partial((char *) udph,
-                                                   ntohs(udph->len), 0));
+        udph->check = csum_ipv6_magic(
+                &ip6h->saddr, &ip6h->daddr, ntohs(udph->len), IPPROTO_UDP,
+                csum_partial((char *)udph, ntohs(udph->len), 0));
         return XT_CONTINUE;
 }
 #endif
