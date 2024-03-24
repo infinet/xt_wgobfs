@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include <xtables.h>
 #include "xt_WGOBFS.h"
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 enum {
         FLAGS_KEY    = 1 << 0,
@@ -155,6 +156,5 @@ static struct xtables_target wg_obfs_reg[] = {
 
 static __attribute__((constructor)) void wg_obfs_ldr(void)
 {
-        xtables_register_targets(wg_obfs_reg,
-                sizeof(wg_obfs_reg) / sizeof(*wg_obfs_reg));
+	xtables_register_targets(wg_obfs_reg, ARRAY_SIZE(wg_obfs_reg));
 }
