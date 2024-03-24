@@ -25,11 +25,11 @@
 #define MIN_RND_LEN             4
 
 enum chacha_output_lengths {
-	MAX_RND_LEN = 32,
-	MAX_RND_WORDS = MAX_RND_LEN / sizeof(u32),
-	WG_COOKIE_WORDS = WG_COOKIE_LEN / sizeof(u32),
-	ONE_WORD = 1,
-	HEAD_OBFS_WORDS = 16 / sizeof(u32) + 1
+        MAX_RND_LEN = 32,
+        MAX_RND_WORDS = MAX_RND_LEN / sizeof(u32),
+        WG_COOKIE_WORDS = WG_COOKIE_LEN / sizeof(u32),
+        ONE_WORD = 1,
+        HEAD_OBFS_WORDS = 16 / sizeof(u32) + 1
 };
 
 struct obfs_buf {
@@ -450,11 +450,10 @@ static unsigned int xt_unobfs6(struct sk_buff *skb,
 }
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 static unsigned int
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 xt_wg_obfs_target4(struct sk_buff *skb, const struct xt_action_param *par)
 #else
-static unsigned int
 xt_wg_obfs_target4(struct sk_buff *skb, const struct xt_target_param *par)
 #endif
 {
@@ -475,11 +474,10 @@ xt_wg_obfs_target4(struct sk_buff *skb, const struct xt_target_param *par)
 }
 
 #if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 static unsigned int
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 xt_wg_obfs_target6(struct sk_buff *skb, const struct xt_action_param *par)
 #else
-static unsigned int
 xt_wg_obfs_target6(struct sk_buff *skb, const struct xt_target_param *par)
 #endif
 {
@@ -526,25 +524,25 @@ static bool xt_wg_obfs_checkentry(const struct xt_tgchk_param *par)
 
 static struct xt_target xt_wg_obfs[] __read_mostly = {
         {
-                .name = "WGOBFS",
-                .revision = 0,
-                .family = NFPROTO_IPV4,
-                .table = "mangle",
-                .target = xt_wg_obfs_target4,
-                .targetsize = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
-                .checkentry = xt_wg_obfs_checkentry,
-                .me = THIS_MODULE,
+                .name           = "WGOBFS",
+                .revision       = 0,
+                .family         = NFPROTO_IPV4,
+                .table          = "mangle",
+                .target         = xt_wg_obfs_target4,
+                .targetsize     = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
+                .checkentry     = xt_wg_obfs_checkentry,
+                .me             = THIS_MODULE,
         },
 #if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
         {
-                .name = "WGOBFS",
-                .revision = 0,
-                .family = NFPROTO_IPV6,
-                .table = "mangle",
-                .target = xt_wg_obfs_target6,
-                .targetsize = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
-                .checkentry = xt_wg_obfs_checkentry,
-                .me = THIS_MODULE,
+                .name           = "WGOBFS",
+                .revision       = 0,
+                .family         = NFPROTO_IPV6,
+                .table          = "mangle",
+                .target         = xt_wg_obfs_target6,
+                .targetsize     = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
+                .checkentry     = xt_wg_obfs_checkentry,
+                .me             = THIS_MODULE,
         },
 #endif
 };
