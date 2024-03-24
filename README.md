@@ -101,6 +101,12 @@ server endpoint. The setup for the remote WG server is the same as in previous
 section.
 
 
+### IPv6
+
+For IPv6, replace `iptables` with `ip6tables` in rules. It is also necessary to
+reduce the MTU of wireguard interface, for example, set the MTU to 1280.
+
+
 ### TCP MSS fix
 
 It is necessary to clamp TCP MSS on TCP traffic over tunnel. Symptoms of TCP
