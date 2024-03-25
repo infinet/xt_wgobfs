@@ -51,6 +51,23 @@ allow_unsupported_modules 1
 ```
 
 
+### DKMS
+
+You can use DKMS to automatically rebuild module on kernel upgrade.
+
+Dependencies: dkms, compiler toolchain
+
+Install with DKMS:
+
+```shell
+git clone https://github.com/infinet/xt_wgobfs
+cd xt_wgobfs/src
+sudo dkms add .
+sudo dkms build -m xt_WGOBFS -v 0.5.0
+sudo dkms install -m xt_WGOBFS -v 0.5.0
+```
+
+
 ### Usage
 
 This extension takes two parameters.
