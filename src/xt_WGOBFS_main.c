@@ -381,8 +381,8 @@ static int xt_unobfs_udp_payload(struct sk_buff *skb, u8 *rnd_len_out,
         udph = udp_hdr(skb);
         buf_udp = (u8 *)udph + sizeof(struct udphdr);
         data_len = ntohs(udph->len) - sizeof(struct udphdr);
-        /* random bytes insertion adds at least 4 bytes */
-        if (data_len < MIN_RND_LEN)
+        /* random bytes insertion adds at least MIN_RND_LEN bytes */
+        if (data_len < (WG_MIN_LEN + MIN_RND_LEN))
                 return NF_DROP;
 
         rnd_len = restore_wg(buf_udp, data_len, info->chacha_key);
