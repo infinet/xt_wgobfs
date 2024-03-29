@@ -256,16 +256,15 @@ static unsigned int xt_obfs4(struct sk_buff *skb,
         iph->check = 0;
         ip_send_check(iph);
 
-        /* since we change the packet pretend that
-         * driver did not checksum it
-         */
-        if (skb->ip_summed == CHECKSUM_PARTIAL ||
-            skb->ip_summed == CHECKSUM_COMPLETE)
-                skb->ip_summed = CHECKSUM_NONE;
-
         /* recalculate udp header checksum */
         udph = udp_hdr(skb);
         udph->len = htons(ntohs(udph->len) + rnd_len);
+        /* Calculate UDP checksum here instead of offloading to hardware. It
+         * is particularly important for two VMs on the same host, where UDP
+         * packets exchanged might bypass hardware offloading, resulting in
+         * incorrect checksums.
+         */
+        skb->ip_summed = CHECKSUM_NONE;
         udph->check = 0;
         udph->check = csum_tcpudp_magic(
                 iph->saddr, iph->daddr, ntohs(udph->len), IPPROTO_UDP,
@@ -290,19 +289,11 @@ static unsigned int xt_obfs6(struct sk_buff *skb,
         ip6h = ipv6_hdr(skb);
         ip6_flow_hdr(ip6h, 0, htonl(0));
 
-        /* recalculate ip header checksum */
         ip6h->payload_len = htons(ntohs(ip6h->payload_len) + rnd_len);
-
-        /* CHECKSUM_PARTIAL: The driver is required to checksum the packet.
-         * With CHECKSUM_PARTIAL, the udp packet has good checksum in VM, bad
-         * checksum after leave VM. Set to CHECKSUM_NONE fixes the problem.
-         */
-        if (skb->ip_summed == CHECKSUM_PARTIAL)
-                skb->ip_summed = CHECKSUM_NONE;
-
         /* recalculate udp header checksum */
         udph = udp_hdr(skb);
         udph->len = htons(ntohs(udph->len) + rnd_len);
+        skb->ip_summed = CHECKSUM_NONE;
         udph->check = 0;
         udph->check = csum_ipv6_magic(
                 &ip6h->saddr, &ip6h->daddr, ntohs(udph->len), IPPROTO_UDP,
