@@ -404,14 +404,11 @@ static unsigned int xt_unobfs4(struct sk_buff *skb,
         iph->check = 0;
         ip_send_check(iph);
 
-        /* since we change the packet pretend that
-         * driver did not checksum it
+        /* If the receiver of unobfuscated packets is a local wireguard, we can
+         * skip UDP checksum and set it to 0. However, the receiver could be
+         * somewhere else on the Internet when WGOBFS is acting as a relay.
+         * Let's make sure these UDP have good checksums.
          */
-        if (skb->ip_summed == CHECKSUM_PARTIAL ||
-            skb->ip_summed == CHECKSUM_COMPLETE)
-                skb->ip_summed = CHECKSUM_NONE;
-
-        /* recalculate udp header checksum */
         udph = udp_hdr(skb);
         udph->len = htons(ntohs(udph->len) - rnd_len);
         udph->check = 0;
