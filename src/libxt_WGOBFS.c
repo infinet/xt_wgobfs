@@ -3,6 +3,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <errno.h>
 #include <getopt.h>
 #include <xtables.h>
@@ -17,6 +18,7 @@ enum {
 
 enum {
         OPT_KEY = 0,
+        OPT_KEEPALIVE_DROP_CHANCE,
         OPT_OBFS,
         OPT_UNOBFS
 };
@@ -28,6 +30,7 @@ enum {
 
 static const struct option wg_obfs_opts[] = {
         { .name = "key", .has_arg = true, .val = OPT_KEY },
+        { .name = "keepalive-drop-chance", .has_arg = optional_argument, .val = OPT_KEEPALIVE_DROP_CHANCE },
         { .name = "obfs", .has_arg = false, .val = OPT_OBFS },
         { .name = "unobfs", .has_arg = false, .val = OPT_UNOBFS },
         {},
@@ -37,6 +40,7 @@ static void wg_obfs_help(void)
 {
         printf("WGOBFS target options:\n"
                "    --key <string>\n"
+               "    --keepalive-drop-chance=<0-255>\n"
                "    --obfs or --unobfs\n");
 }
 
@@ -77,6 +81,15 @@ static int wg_obfs_parse(int c, char **argv, int z1, unsigned int *flags,
                 expand_string(s, len, chacha_key, XT_CHACHA_KEY_SIZE);
                 memcpy(info->chacha_key, chacha_key, XT_CHACHA_KEY_SIZE);
                 return true;
+        case OPT_KEEPALIVE_DROP_CHANCE:
+                if (s == NULL)
+                    xtables_error(PARAMETER_PROBLEM,
+                                  "WGOBFS: Drop chance should be specified");
+                if (sscanf(s, "%" SCNu8, &info->keepalive_drop_chance) != 1)
+                    xtables_error(PARAMETER_PROBLEM,
+                                  "WGOBFS: Drop chance is not a valid number");
+                info->is_kdc_default = false;
+                return true;
         case OPT_OBFS:
                 info->mode = XT_MODE_OBFS;
                 *flags |= FLAGS_OBFS;
@@ -100,25 +113,36 @@ static void wg_obfs_check(unsigned int flags)
                               "WGOBFS: --obfs or --unobfs is required.");
 }
 
+/* set default parameters for --keepalive-drop-chance */
+static void wg_obfs_init(struct xt_entry_target *tgt)
+{
+        struct xt_wg_obfs_info *info = (void *)tgt->data;
+
+        info->is_kdc_default = true;
+        info->keepalive_drop_chance = XT_WGOBFS_DEFAULT_KDC;
+}
+
 /* invoke by `iptables -L` to show previously inserted rules */
 static void wg_obfs_print(const void *z1, const struct xt_entry_target *tgt,
                           int z2)
 {
         const struct xt_wg_obfs_info *info = (const void *)tgt->data;
+
+        printf(" --key %s", info->key);
+
+        if (!info->is_kdc_default)
+                printf(" --keepalive-drop-chance=%" PRIu8, info->keepalive_drop_chance);
+
         if (info->mode == XT_MODE_OBFS)
-                printf(" --key %s --obfs", info->key);
+                printf(" --obfs ");
         else if (info->mode == XT_MODE_UNOBFS)
-                printf(" --key %s --unobfs", info->key);
+                printf(" --unobfs ");
 }
 
-/* for iptables-save to dump rules */
+/* for iptables-save to dump rules; identical to print */
 static void wg_obfs_save(const void *u, const struct xt_entry_target *tgt)
 {
-        const struct xt_wg_obfs_info *info = (const void *)tgt->data;
-        if (info->mode == XT_MODE_OBFS)
-                printf(" --key %s --obfs", info->key);
-        else if (info->mode == XT_MODE_UNOBFS)
-                printf(" --key %s --unobfs", info->key);
+        wg_obfs_print(u, tgt, 0);
 }
 
 static struct xtables_target wg_obfs_reg[] = {
@@ -130,6 +154,7 @@ static struct xtables_target wg_obfs_reg[] = {
                 .size           = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
                 .userspacesize  = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
                 .help           = wg_obfs_help,
+                .init           = wg_obfs_init,
                 .parse          = wg_obfs_parse,
                 .final_check    = wg_obfs_check,
                 .print          = wg_obfs_print,
@@ -144,6 +169,7 @@ static struct xtables_target wg_obfs_reg[] = {
                 .size           = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
                 .userspacesize  = XT_ALIGN(sizeof(struct xt_wg_obfs_info)),
                 .help           = wg_obfs_help,
+                .init           = wg_obfs_init,
                 .parse          = wg_obfs_parse,
                 .final_check    = wg_obfs_check,
                 .print          = wg_obfs_print,
