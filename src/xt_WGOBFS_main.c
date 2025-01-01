@@ -557,5 +557,5 @@ module_exit(wg_obfs_target_exit);
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("Iptables obfuscation module for WireGuard");
 MODULE_AUTHOR("Wei Chen <weichen302@gmail.com>");
-MODULE_VERSION("0.6");
+MODULE_VERSION("0.6.1");
 MODULE_ALIAS("xt_WGOBFS");
