@@ -1,17 +1,17 @@
 #
-# Copyright (C) 2022-2023 Wei Chen <weichen302@gmail.com>
+# Copyright (C) 2022-2025 Wei Chen <weichen302@gmail.com>
 #
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=xtables-wgobfs
-PKG_VERSION:=0.5.0
+PKG_VERSION:=0.6.1
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/xt_wgobfs-$(PKG_VERSION)
 PKG_SOURCE:=xt_wgobfs-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:= https://github.com/infinet/xt_wgobfs/releases/download/v$(PKG_VERSION)/
-PKG_HASH:=3d1c6304b92b1977aeeafa875323b85bdbe69272c481aa5c07c39051fef92655
+PKG_HASH:=e76ab54e7df4869593a2b5d538046cd06d2e336fc7e4f21229adee7bac79cd7b
 
 PKG_LICENSE:=GPL-2.0-only
 PKG_LICENSE_FILES:=COPYING
