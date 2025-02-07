@@ -6,9 +6,15 @@
 #ifndef _XT_CHACHA8_H
 #define _XT_CHACHA8_H
 
-#include <asm/unaligned.h>
 #include <linux/kernel.h>
 #include <linux/types.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
+#include <asm/unaligned.h>
+#else
+#include <linux/unaligned.h>
+#endif
 
 enum chacha_lengths {
 	CHACHA20_NONCE_SIZE = 16,
