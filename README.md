@@ -51,6 +51,18 @@ allow_unsupported_modules 1
 ```
 
 
+### DKMS
+
+To use DKMS, first generate a source tarball, then install it as superuser:
+
+```shell
+./autogen.sh
+./configure
+make tarball
+sudo make dkms-install
+```
+
+
 ### Usage
 
 This extension takes three parameters.

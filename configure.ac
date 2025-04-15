@@ -1,4 +1,4 @@
-AC_INIT([xt_wgobfs], [0.6])
+AC_INIT([xt_wgobfs], [0.6.2])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -8,7 +8,7 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 AC_DISABLE_STATIC
-AC_PROG_LIBTOOL
+LT_INIT
 
 AC_ARG_WITH([kbuild],
 	AS_HELP_STRING([--with-kbuild=PATH],
@@ -45,5 +45,5 @@ AC_SUBST([regular_CPPFLAGS])
 AC_SUBST([regular_CFLAGS])
 AC_SUBST([kbuilddir])
 AC_SUBST([xtlibdir])
-AC_CONFIG_FILES([Makefile Makefile.libxt])
+AC_CONFIG_FILES([Makefile src/Makefile src/Makefile.libxt])
 AC_OUTPUT
