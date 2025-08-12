@@ -20,4 +20,10 @@ dkms-install:
 	@[ -f ${tarball_name} ] || { echo "${tarball_name} does not exist. To generate, run make tarball"; exit 1; }
 	tar xf ${tarball_name} -C /usr/src
 	dkms add -m ${PACKAGE_NAME} -v ${PACKAGE_VERSION}
+	@make --no-print-directory dkmsinst
+
+# On Debian 13, need wrap it in @make --no-print-directory. Otherwise the
+# "make[1] entering directory ..." message will pollute configure's gcc
+# detection.
+dkmsinst:
 	dkms install -m ${PACKAGE_NAME} -v ${PACKAGE_VERSION}

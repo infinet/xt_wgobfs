@@ -12,7 +12,7 @@ numbers are used in obfuscation.
 
 `Chacha6` is chosen for its speed, as the goal is not encryption.
 
-Tested working on Alpine linux kernel 5.15, CentOS 7, Debian 10/11/12 and
+Tested working on Alpine linux kernel 5.15, CentOS 7, Debian 10 to 13 and
 openSUSE 15.5.
 
 
@@ -20,7 +20,7 @@ openSUSE 15.5.
 
 - Alpine: alpine-sdk iptables-dev linux-lts-dev or linux-virt-dev
 - CentOS 7: iptables-devel kernel-devel
-- Debian 10/11/12 : autoconf libtool libxtables-dev linux-headers pkg-config
+- Debian 10 to 13 : autoconf libtool libxtables-dev linux-headers pkg-config
 - openSUSE 15: autoconf automake gcc kernel-default-devel libtool libxtables-devel make
 
 
