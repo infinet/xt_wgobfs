@@ -12,6 +12,7 @@
 
 #if IS_ENABLED(CONFIG_IP6_NF_IPTABLES)
 #include <net/ipv6.h>
+#include <net/ip6_checksum.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 #endif
 
