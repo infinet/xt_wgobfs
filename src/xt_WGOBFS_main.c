@@ -106,7 +106,8 @@ static void obfs_mac2(u8 *buf, const int data_len, struct obfs_buf *ob,
 }
 
 static int random_drop_wg_keepalive(u8 *buf, const int len,
-                                    struct obfs_buf *ob, const u8 *key)
+                                    struct obfs_buf *ob, const u8 *key,
+                                    const u8 drop_chance)
 {
         u8 type = *buf;
         u8 *counter = ob->chacha_in;
@@ -118,7 +119,7 @@ static int random_drop_wg_keepalive(u8 *buf, const int len,
         (*counter)++;
         chacha_hash(ob->chacha_in, key, ob->chacha_out, ONE_WORD);
 
-        if (ob->chacha_out[0] > 50)
+        if (ob->chacha_out[0] < drop_chance)
                 return 1;
         else
                 return 0;
@@ -215,7 +216,7 @@ static unsigned int xt_obfs_udp_payload(struct sk_buff *skb, u8 *rnd_len_out,
         ob.chacha_in[0] += 42;
 
         if (random_drop_wg_keepalive(buf_udp, wg_data_len, &ob,
-                                     info->chacha_key))
+                                     info->chacha_key, info->keepalive_drop_chance))
                 return NF_DROP;
 
         /* Insert a long pseudo-random string if the WG packet is small, or a
