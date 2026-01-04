@@ -15,6 +15,8 @@ numbers are used in obfuscation.
 Tested working on Alpine linux kernel 5.15, CentOS 7, Debian 10 to 13 and
 openSUSE 15.5.
 
+Windows, BSDs and Mac user can use the Rust implementation
+[rs-wgobfs](https://github.com/infinet/rs-wgobfs).
 
 ### Build dependence
 
