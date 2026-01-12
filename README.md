@@ -1,5 +1,12 @@
 # Iptables WireGuard obfuscation extension
 
+This is a Linux kernel module that runs on Linux. Users on Windows, Mac, BSD,
+and pfSense can use the fully compatible cross-platform CLI
+[rs-wgobfs](https://github.com/infinet/rs-wgobfs).
+
+
+### How it works
+
 The sender and receiver share a secret key, which is used by `chacha6` to hash
 the same input into identical pseudo-random numbers. These pseudo-random
 numbers are used in obfuscation.
@@ -15,8 +22,6 @@ numbers are used in obfuscation.
 Tested working on Alpine linux kernel 5.15, CentOS 7, Debian 10 to 13 and
 openSUSE 15.5.
 
-Windows, BSDs and Mac user can use the Rust implementation
-[rs-wgobfs](https://github.com/infinet/rs-wgobfs).
 
 ### Build dependence
 
@@ -72,7 +77,7 @@ This extension takes two parameters.
 `--key` for a shared secret between client and server. If a key is a long
 string, it will be cut at 32 characters; if a key is short, then it will be
 repeated until reaches 32 characters. This 32 characters long string is the key
-used by chacha8 hash.
+used by `chacha6` hash.
 
 `--obfs` or `--unobfs` to indicate the operation mode.
 
