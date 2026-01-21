@@ -72,12 +72,23 @@ sudo make dkms-install
 
 ### Usage
 
-This extension takes two parameters.
+This extension takes three parameters.
 
 `--key` for a shared secret between client and server. If a key is a long
 string, it will be cut at 32 characters; if a key is short, then it will be
 repeated until reaches 32 characters. This 32 characters long string is the key
 used by `chacha6` hash.
+
+`--keepalive-drop-chance=n` (optional) to specify chance to drop a wireguard
+keepalive packet. Chance is represented as a number from 0 to 255. Corresponding
+probability to drop a packet can be calculated via the following formula:
+`p = n / 256`.
+
+In other words:
+- `n=0` means never drop keepalive packets.
+- `n=255` means drop keepalive packet almost every time.
+
+By default, it is set to 205 (`p ≈ 0.8`).
 
 `--obfs` or `--unobfs` to indicate the operation mode.
 
