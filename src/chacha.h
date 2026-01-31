@@ -28,6 +28,6 @@ enum chacha_lengths {
 };
 
 void chacha_hash(const u8  in[CHACHA_INPUT_SIZE],
-                 const u8 key[CHACHA20_KEY_SIZE], u8 *out, int out_words);
+                 const u8 key[CHACHA20_KEY_SIZE], u8 *out, u32 len);
 
 #endif /* _XT_CHACHA8_H */

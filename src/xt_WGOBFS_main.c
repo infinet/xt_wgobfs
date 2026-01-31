@@ -26,22 +26,20 @@
 #define MIN_RND_LEN             4
 
 enum chacha_output_lengths {
-        MAX_RND_LEN = 32,
-        MAX_RND_WORDS = MAX_RND_LEN / sizeof(u32),
-        WG_COOKIE_WORDS = WG_COOKIE_LEN / sizeof(u32),
-        ONE_WORD = 1,
-        HEAD_OBFS_WORDS = 16 / sizeof(u32) + 1
+        MAX_RND_LEN = 255,
+        MAX_CHACHA_OUT_LEN = 256,
+        HEAD_OBFS_LEN = 20
 };
 
 struct obfs_buf {
         u8 chacha_in[CHACHA_INPUT_SIZE];
-        u8 chacha_out[MAX_RND_LEN];
-        u8 rnd[MAX_RND_LEN];
+        u8 chacha_out[MAX_CHACHA_OUT_LEN];
+        u8 rnd[MAX_CHACHA_OUT_LEN];
         u8 rnd_len;
 };
 
 /* get a pseudo-random string by hashing part of wg message */
-static u8 get_prn_insert(u8 *buf, struct obfs_buf *ob, const u8 *k,
+static u8 get_prn_insert(struct obfs_buf *ob, const u8 *k,
                          const u8 min_len, const u8 max_len)
 {
         u8 r, i;
@@ -50,8 +48,8 @@ static u8 get_prn_insert(u8 *buf, struct obfs_buf *ob, const u8 *k,
         r = 0;
         while (1) {
                 (*counter)++;
-                chacha_hash(ob->chacha_in, k, ob->rnd, MAX_RND_WORDS);
-                for (i = 0; i < MAX_RND_LEN; i++) {
+                chacha_hash(ob->chacha_in, k, ob->rnd, max_len);
+                for (i = 0; i < max_len; i++) {
                         if (ob->rnd[i] >= min_len && ob->rnd[i] <= max_len) {
                                 r = ob->rnd[i];
                                 break;
@@ -88,7 +86,7 @@ static void obfs_mac2(u8 *buf, const int data_len, struct obfs_buf *ob,
 
                 /* Write 128bits PRN to mac2 */
                 (*counter)++;
-                chacha_hash(ob->chacha_in, k, hsi->macs.mac2, WG_COOKIE_WORDS);
+                chacha_hash(ob->chacha_in, k, hsi->macs.mac2, WG_COOKIE_LEN);
 
                 /* mark the packet as need restore mac2 upon receiving */
                 buf[0] |= 0x10;
@@ -100,7 +98,7 @@ static void obfs_mac2(u8 *buf, const int data_len, struct obfs_buf *ob,
                         return;
 
                 (*counter)++;
-                chacha_hash(ob->chacha_in, k, hsr->macs.mac2, WG_COOKIE_WORDS);
+                chacha_hash(ob->chacha_in, k, hsr->macs.mac2, WG_COOKIE_LEN);
                 buf[0] |= 0x10;
         }
 }
@@ -116,7 +114,7 @@ static int random_drop_wg_keepalive(u8 *buf, const int len,
 
         /* assume the probability of a 1 byte PRN > 50 is 0.8 */
         (*counter)++;
-        chacha_hash(ob->chacha_in, key, ob->chacha_out, ONE_WORD);
+        chacha_hash(ob->chacha_in, key, ob->chacha_out, 4);
 
         if (ob->chacha_out[0] > 50)
                 return 1;
@@ -150,7 +148,7 @@ static void obfs_wg(u8 *buf, const int len, struct obfs_buf *ob, const u8 *key)
         /* Use PRN to XOR with the first 16 bytes of WG message. It has message
          * type, reserved field and counter. They look distinct.
          */
-        chacha_hash(buf + 16, key, ob->chacha_out, HEAD_OBFS_WORDS);
+        chacha_hash(buf + 16, key, ob->chacha_out, HEAD_OBFS_LEN);
 
         /* set the last byte of random as its length */
         buf[len + rnd_len - 1] = rnd_len ^ ob->chacha_out[16];
@@ -222,7 +220,7 @@ static unsigned int xt_obfs_udp_payload(struct sk_buff *skb, u8 *rnd_len_out,
          * short string if WG packet is big.
          */
         max_rnd_len = (wg_data_len > 200) ? 8 : MAX_RND_LEN;
-        rnd_len = get_prn_insert(buf_udp, &ob, info->chacha_key, MIN_RND_LEN,
+        rnd_len = get_prn_insert(&ob, info->chacha_key, MIN_RND_LEN,
                                  max_rnd_len);
         ob.rnd_len = rnd_len;
         if (prepare_skb_for_insert(skb, rnd_len))
@@ -335,7 +333,7 @@ static u8 restore_wg(u8 *buf, int len, const u8 *key)
         /* Same as obfuscate, generate the same PRN from 16th to 31st bytes of
          * WG message. Need it for restoring the first 16 bytes of WG message.
          */
-        chacha_hash(buf + 16, key, buf_prn, HEAD_OBFS_WORDS);
+        chacha_hash(buf + 16, key, buf_prn, HEAD_OBFS_LEN);
 
         /* Restore the length of random padding. It is stored in the last byte
          * of obfuscated WG.

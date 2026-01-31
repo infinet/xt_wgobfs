@@ -5,6 +5,7 @@
  * modified from Jason A. Donenfeld's wireguard, simd is not included
  */
 #include "chacha.h"
+#include <linux/string.h>
 
 enum chacha20_constants { /* expand 32-byte k */
 	CHACHA20_CONSTANT_EXPA = 0x61707865U,
@@ -78,8 +79,27 @@ static inline void chacha20_init(struct chacha20_ctx *ctx,
 	DOUBLE_ROUND(x) \
 )
 
-/* Hash 16 bytes input into 32 bytes hash. Only use 32 bytes of 64 bytes chacha
- * output.
+static void chacha_block_generic(struct chacha20_ctx *ctx, __le32 *stream)
+{
+	u32 x[CHACHA20_BLOCK_WORDS];
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(x); ++i)
+		x[i] = ctx->state[i];
+
+	SIX_ROUNDS(x);
+
+	for (i = 0; i < ARRAY_SIZE(x); ++i)
+		stream[i] = cpu_to_le32(x[i] + ctx->state[i]);
+
+	// Standard chacha20 increments ctx->counter[0] to generate PRN stream.
+	// However, since the first byte of ctx->counter[0] is incremented to
+	// generate different PRN from the same input, here increments the
+	// ctx->counter[3] instead.
+	ctx->counter[3] += 1;
+}
+
+/* Hash 16 bytes input into arbitrary length PRN
  *
  * Jean-Philippe Aumasson, https://eprint.iacr.org/2019/1492.pdf
  *   - attack on chacha5 runs in 2^16 time(unknown unit)
@@ -88,20 +108,21 @@ static inline void chacha20_init(struct chacha20_ctx *ctx,
  * Use chacha6 to generate PRN since WG is taking care of security.
  */
 void chacha_hash(const u8 in[CHACHA_INPUT_SIZE],
-                 const u8 key[CHACHA20_KEY_SIZE], u8 *out, int out_words)
+                 const u8 key[CHACHA20_KEY_SIZE], u8 *out, u32 len)
 {
 	struct chacha20_ctx ctx;
-	u32 x[CHACHA20_BLOCK_WORDS];
-	__le32 *stream = (__le32 *) out;
-	int i;
+	__le32 buf[CHACHA20_BLOCK_WORDS];
 
 	chacha20_init(&ctx, key, in);
-	for (i = 0; i < CHACHA20_BLOCK_WORDS; ++i)
-		x[i] = ctx.state[i];
+	while (len >= CHACHA20_BLOCK_SIZE) {
+		chacha_block_generic(&ctx, buf);
+		memcpy(out, (u8 *)buf, CHACHA20_BLOCK_SIZE);
+		len -= CHACHA20_BLOCK_SIZE;
+		out += CHACHA20_BLOCK_SIZE;
+	}
 
-	SIX_ROUNDS(x);
-
-	//for (i = 0; i < CHACHA_OUTPUT_WORDS; ++i)
-	for (i = 0; i < out_words; ++i)
-		stream[i] = cpu_to_le32(x[i] + ctx.state[i]);
+	if (len) {
+		chacha_block_generic(&ctx, buf);
+		memcpy(out, (u8 *)buf, len);
+	}
 }
